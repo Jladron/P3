@@ -1,4 +1,4 @@
-from contextlib import aclosing
+from contextlib import AsyncExitStack, aclosing
 import mariadb
 import sys
 import os
@@ -43,16 +43,54 @@ def reiniciar(conexion):
     except mariadb.Error as error_tabla:
         print(f"Error al crear la tabla: {error_tabla}")
 
-def crearTablaClientes(conexion):
-    print()
+def subsistemaClientes(conexion):
+    borrarPantalla()
+    cursor = conexion.cursor()
+    cursor.execute('SAVEPOINT inicio')
+    print("Usted ha ingresado en el Subsitema de Clientes.")
+    salir_clientes = False
+    while not salir_clientes:
+        print("1.-Dar de alta a un nuevo cliente")
+        print("2.-Dar de baja a un cliente ya existente")
+        print("3.-Consultar los datos de un cliente ya existente")
+        print("4.-Alterar los datos de un cliente ya existente")
+        print("5.-Listar las cuentas de un cliente")
+
+        opcion_clientes = int(input("¿Qué operación desea realizar?:"))
+
+        if opcion_clientes == 1:
+            dardealtacliente(conexion)
+
+def dardealtacliente(conexion):
+    borrarPantalla()
+    cursor = conexion.cursor()
+    print("Se va a dar de alta a un nuevo cliente.")
+    cursor.execute("SAVEPOINT alta_cliente")
+    Nombre = input("Introduce el nombre del cliente: ")
+    Apellido = input("Introduce el apellido del cliente: ")
+    DNI = input("Introduce el DNI del cliente: ")
+    Telefono = input("Introduce el Teléfono del cliente: ")
+    
+    try:
+        cursor.execute("INSERT INTO CLIENTES (Nombre, Apellido, DNI, Teléfono) VALUES ('"+Nombre+"','"+Apellido+"','"+DNI+"','"+Telefono+"')")
+        print("Se ha dado de alta al nuevo cliente correctamente")
+    except mariadb.Error as error_alta_cliente:
+        print("Ha fallado el proceso de alta al nuevo cliente")
+        print(error_alta_cliente)
+        cursor.execute("ROLLBACK TO SAVEPOINT alta_cliente")
+    finally:
+        subsistemaClientes(conexion)
+        conexion.commit()
+        cursor.close()
+
 
 # Nos conectamos a la base de datos
 
 cnx = conexion()
-borrarPantalla()
 salir = False
 
 while not salir:
+    borrarPantalla()
     print("Opciones:")
     print("1.-REINICIAR")
     print("2.-")
@@ -68,9 +106,9 @@ while not salir:
     if opcion==1:
         reiniciar(cnx)
     elif opcion==2:
-        crearTablaClientes(cnx)
-    elif opcion==3:
         nada
+    elif opcion==3:
+        subsistemaClientes(cnx)
     elif opcion==4:
         nada
     elif opcion==5:
