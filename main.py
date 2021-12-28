@@ -41,6 +41,16 @@ def reiniciar(conexion):
                 DNI VARCHAR (9) UNIQUE,
                 Telefono VARCHAR (9) NOT NULL,
                 PRIMARY KEY (DNI));''')
+
+        cursor.execute('''CREATE TABLE TRABAJADORES(
+                Nombre VARCHAR (20) NOT NULL,
+                Apellido VARCHAR (40) NOT NULL,
+                DNI VARCHAR (9) UNIQUE,
+                Telefono VARCHAR (9) NOT NULL,
+                Correo VARCHAR (40) NOT NULL
+                NumeroCuenta VARCHAR (24) NOT NULL,
+                IdentificadorSucursal VARCHAR (24),
+                PRIMARY KEY (DNI));''')
         conexion.commit()
     except mariadb.Error as error_tabla:
         print(f"Error al crear la tabla: {error_tabla}")
