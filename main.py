@@ -4,6 +4,7 @@ import mariadb
 import sys
 import os
 import platform
+from random import randint 
 
 def conexion():
     try:
@@ -34,6 +35,7 @@ def reiniciar(conexion):
         cursor = conexion.cursor()
 
         cursor.execute('''DROP TABLE CLIENTES;''')
+        cursor.execute('''DROP TABLE SUCURSALES''')
 
         cursor.execute('''CREATE TABLE CLIENTES(
                 Nombre VARCHAR (20) NOT NULL,
@@ -57,13 +59,18 @@ def reiniciar(conexion):
                 FechaFin DATETIME,
                 DNI VARCHAR (9) REFERENCES TRABAJADORES(DNI),
                 PRIMARY KEY (DNI, FechaInicio, FechaFin));''')
+        
+        cursor.execute('''CREATE TABLE SUCURSALES(
+                Direccion VARCHAR(40) NOT NULL,
+                ID_Sucursal VARCHAR (10) UNIQUE NOT NULL,
+                PRIMARY KEY (ID_Sucursal));''')
         conexion.commit()
     except mariadb.Error as error_tabla:
         print(f"Error al crear la tabla: {error_tabla}")
 
 def subsistemaClientes(conexion):
     cursor = conexion.cursor()
-    print("Usted a accedido al subsistema de gestión de clientes")
+    print("Usted ha accedido al subsistema de gestión de clientes")
     salir_cli = False
     while not salir_cli:
         print("1.-Dar de alta a un nuevo cliente")
@@ -170,6 +177,106 @@ def modificarDatosClientes(conexion):
             conexion.commit()
             salir_mod_cli = True
 
+# EN OBRAS
+def subsistemaSucursales(conexion):
+    cursor = conexion.cursor()
+    
+    print("Usted ha accedido al Subsistema de Sucursales.\n")
+    salir_cli = False
+
+    while not salir_cli:
+        print ("1.- Crear una nueva sucursal.")
+        print ("2.- Eliminar una sucursal.")
+        print ("3.- Asignar trabajadores a una sucursal.")
+        print ("4.- Listar sucursales.")
+        print ("5.- Consultar trabajadores de una sucursal.")
+        print ("6.- Salir del Subsistema de Sucursales.\n")
+
+        opcion_cli = int(input("Introduzca la opción a la que quiera acceder: "))
+
+        if (opcion_cli == 1):
+            borrarPantalla()
+            crearSucursal(conexion)
+        elif (opcion_cli == 2):
+            borrarPantalla()
+            eliminarSucursal(conexion)
+        elif (opcion_cli == 3):
+            borrarPantalla()
+            asignarTrabajadores(conexion)
+        elif (opcion_cli == 4):
+            borrarPantalla()
+            listarSucursales(conexion)
+        elif (opcion_cli == 5):
+            borrarPantalla()
+            consultarTrabajadores(conexion)
+        elif (opcion_cli == 6):
+            salir_cli = True
+
+def random_n_digitos(n):
+    range_start = 10**(n-1)
+    range_end = (10**n)-1
+    return randint(range_start, range_end)
+
+def crearSucursal(conexion):
+    cursor = conexion.cursor()
+    cursor.execute("SAVEPOINT crear_sucursal")
+    borrarPantalla()
+
+    Direccion = input("Para crear una sucursal debe proporcionar la dirección postal de la misma usando hasta 40 caracteres: ")
+    ID_Sucursal = str(random_n_digitos(10))
+
+    try:
+        cursor.execute("INSERT INTO SUCURSALES (Direccion, ID_Sucursal) VALUES('"+Direccion+"','"+ID_Sucursal+"')")
+        print("\nSucursal creada correctamente con los siguientes datos:")
+        print("Dirección postal:",Direccion)
+        print("ID de la sucursal generado automáticamente:",ID_Sucursal)
+        print("\nVolviendo al menú anterior. \n")
+    except mariadb.Error as error_crear_sucursal:
+        print("Ha fallado el proceso de creación de una sucursal.\n")
+        print(error_crear_sucursal, "\n")
+        cursor.execute("ROLLBACK to crear_sucursal")
+    finally:
+        conexion.commit()
+
+def eliminarSucursal(conexion):
+    cursor = conexion.cursor()
+    cursor.execute("SAVEPOINT eliminar_sucursal")
+    borrarPantalla()
+
+    ID_Sucursal = input("Para poder eliminar una sucursal debe proporcionar su ID: ")
+
+    try:
+        cursor.execute("DELETE FROM SUCURSALES WHERE ID_SUCURSAL = ('"+ID_Sucursal+"')")
+        print("\nSucursal eliminada correctamente.")
+        print("\nVolviendo al menú anterior. \n")
+    except mariadb.Error as error_eliminar_sucursal:
+        print("Ha fallado el proceso de eliminación de una sucursal.\n")
+        print(error_eliminar_sucursal, "\n")
+        cursor.execute("ROLLBACK to eliiminar_sucursal")
+    finally:
+        conexion.commit()
+
+def listarSucursales(conexion):
+    cursor = conexion.cursor()
+    borrarPantalla()
+
+    try:
+        query = "SELECT * FROM SUCURSALES"
+        cursor.execute(query)
+        records = cursor.fetchall()
+
+        print("\nLista de sucursales existentes:\n")
+
+        print ("{:<40} {:<10}".format('Dirección','ID_Sucursal'))
+        for record in records:
+            Direccion, ID_Sucursal = record
+            print("{:<40} {:<10}".format(Direccion, ID_Sucursal))
+        print("\nVolviendo al menú anterior.\n")
+    except mariadb.Error as error_mostrar_sucursales:
+        print("Error al mostrar las sucursales.\n")
+        print(error_mostrar_sucursales, "\n")
+
+
 
 # Nos conectamos a la base de datos
 
@@ -178,16 +285,17 @@ salir = False
 
 while not salir:
     borrarPantalla()
-    print("Opciones:")
-    print("1.-REINICIAR")
-    print("2.-SUBSISTEMA TRABAJADORES")
-    print("3.-SUBSISTEMA CLIENTES")
-    print("4.-SUBSISTEMA SERVICIOS")
-    print("5.-SUBSISTEMA CUENTAS")
-    print("6.-SUBSISTEMA SUCURSALES")
-    print("7.-SALIR")
+    print("¡Bienvenido al Sistema Informático del Banco de España! Esperamos que no nos robe el oro.")
+    print("\nA continuación se le muestran los subsistemas disponibles:")
+    print("1.- REINICIAR")
+    print("2.- SUBSISTEMA TRABAJADORES")
+    print("3.- SUBSISTEMA CLIENTES")
+    print("4.- SUBSISTEMA SERVICIOS")
+    print("5.- SUBSISTEMA CUENTAS")
+    print("6.- SUBSISTEMA SUCURSALES")
+    print("7.- SALIR")
 
-    opcion = int(input("INTRODUCE EL NUMERO DE LA OPCIÓN: "))
+    opcion = int(input("\nIntroduzca el número del subsistema al que desee acceder: "))
 
     if opcion==1:
         borrarPantalla()
@@ -203,8 +311,9 @@ while not salir:
         borrarPantalla()
     elif opcion==6:
         borrarPantalla()
+        subsistemaSucursales(cnx)
     elif opcion==7:
         desconexion(cnx)
         salir = True
     else:
-        print("Escribe una opción correcta")
+        print("ERROR: NO ES UNA OPCIÓN CORRECTA.")
