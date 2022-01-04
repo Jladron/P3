@@ -92,12 +92,12 @@ def subsistemaClientes(conexion):
     print("Usted ha accedido al subsistema de gestión de clientes")
     salir_cli = False
     while not salir_cli:
-        print("1.-Dar de alta a un nuevo cliente")
-        print("2.-Dar de baja a un cliente")
-        print("3.-Consultar datos personales de un cliente")
-        print("4.-Modificar datos de un cliente")
-        print("6.-Salir del subsistema clientes")
-        opcion_cli = int(input("Introduce el número de la operación a realizar: "))
+        print("1.- Dar de alta a un nuevo cliente.")
+        print("2.- Dar de baja a un cliente.")
+        print("3.- Consultar datos personales de un cliente.")
+        print("4.- Modificar datos de un cliente.")
+        print("6.- Salir del subsistema clientes.")
+        opcion_cli = int(input("Introduzca el número de la operación a realizar: "))
         if(opcion_cli==1):
             borrarPantalla()
             darAltaCliente(conexion)
@@ -120,7 +120,7 @@ def darAltaCliente(conexion):
     Nombre=input("Introduzca el nombre del nuevo cliente: ")
     Apellido=input("Introduzca el apellido del nuevo cliente: ")
     DNI=input("Introduzca el DNI del nuevo cliente: ")
-    Telefono=input("Introduzca el telefono del nuevo cliente: ")
+    Telefono=input("Introduzca el teléfono del nuevo cliente: ")
     try:
         cursor.execute("INSERT INTO CLIENTES (Nombre, Apellido, DNI, Telefono) VALUES('"+Nombre+"','"+Apellido+"','"+DNI+"','"+Telefono+"')")
         borrarPantalla()
@@ -137,16 +137,16 @@ def darAltaCliente(conexion):
 def darBajaCliente(conexion):
     cursor = conexion.cursor()
     cursor.execute("SAVEPOINT baja_cliente")
-    print("Usted está dando de baja a un cliente")
+    print("Usted está dando de baja a un cliente.")
     DNI=input("Introduzca el DNI del cliente: ")
     try:
         cursor.execute("DELETE FROM CLIENTES WHERE DNI='"+DNI+"'")
         borrarPantalla()
-        print("Se ha dado de baja al cliente correctamente")
+        print("Se ha dado de baja al cliente correctamente.")
         print()
     except mariadb.Error as error_baja_cliente:
         borrarPantalla()
-        print("Ha fallado el proceso de baja del cliente")
+        print("Ha fallado el proceso de baja del cliente.")
         print(error_baja_cliente)
         cursor.execute("ROLLBACK to baja_cliente")
     finally:
@@ -164,14 +164,14 @@ def consultarDatosClientes(conexion):
         print()
     except mariadb.Error as error_consulta_cliente:
         borrarPantalla()
-        print("Ha fallado el proceso de consulta de datos del cliente")
+        print("Ha fallado el proceso de consulta de datos del cliente.")
         print(error_consulta_cliente)
         cursor.execute("ROLLBACK TO consulta_cliente")
 
 def modificarDatosClientes(conexion):
     cursor = conexion.cursor()
     print("Se encuentra usted en la funcionalidad de modificación de datos")
-    DNI = input("Introduzca el DNI del cliente sobre el que quiere aplicar la modificacion de datos: ")
+    DNI = input("Introduzca el DNI del cliente sobre el que quiere aplicar la modificación de datos: ")
     salir_mod_cli = False
     while not salir_mod_cli:
         print("1.-Modificar Nombre.")
