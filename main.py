@@ -351,8 +351,9 @@ def subsistemaTrabajadores(conexion):
     while not salir_Tra:
         print("1.- Dar de alta a un nuevo trabajador.")
         print("2.- Dar de baja a un trabajador.")
-        print("3.- Consultar datos personales de un trabajador.")
-        print("4.- Modificar datos de un trabajador.")
+        print("3.- Modificar datos de un trabajador.")
+        print("4.- Asignar turno a un trabajador.")
+        print("5.- Consultar trabajadores libres.")
         print("6.- Salir del Subsistema Trabajadores.\n")
         opcion_Tra = int(input("Introduzca el número de la operación a realizar: "))
         if(opcion_Tra==1):
@@ -363,10 +364,13 @@ def subsistemaTrabajadores(conexion):
             darBajaTrabajador(conexion)
         elif(opcion_Tra==3):
             borrarPantalla()
-            consultarDatosTrabajadores(conexion)
+            modificarDatosTrabajadores(conexion)
         elif(opcion_Tra==4):
             borrarPantalla()
-            modificarDatosTrabajadores(conexion)
+            asignarTurno(conexion)
+        elif(opcion_Tra==5):
+            borrarPantalla()
+            consultarTrabajadoresLibres(conexion)
         elif(opcion_Tra==6):
             salir_Tra = True
     
