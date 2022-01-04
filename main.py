@@ -6,10 +6,14 @@ import os
 import platform
 from random import randint 
 
+##############################################################
+### CONEXIÓN ###
+##############################################################
+
 def conexion():
     try:
         #Aquí cambiais cada uno los valores para vuestras BD's locales
-        conn = mariadb.connect(user="root",password="rosquilla1",host="127.0.0.1",port=3306,database="practica3")
+        conn = mariadb.connect(user="root",password="password",host="127.0.0.1",port=3306,database="pruebas")
         print("Conectado a la base de datos.")
     except mariadb.Error as e:
         print(f"Error connecting to MariaDB Platform: {e}")
@@ -23,6 +27,9 @@ def desconexion(conn):
     borrarPantalla()
     print('Desconexión de la base de datos')
 
+##############################################################
+### OTROS MÉTODOS ###
+##############################################################
 def borrarPantalla():
     if os.name == "posix":
         os.system("clear")
@@ -35,7 +42,9 @@ def reiniciar(conexion):
         cursor = conexion.cursor()
 
         cursor.execute('''DROP TABLE CLIENTES;''')
-        cursor.execute('''DROP TABLE SUCURSALES''')
+        cursor.execute('''DROP TABLE SUCURSALES;''')
+        cursor.execute('''DROP TABLE TRABAJADORES;''')
+        cursor.execute('''DROP TABLE TRABAJA;''')
 
         cursor.execute('''CREATE TABLE CLIENTES(
                 Nombre VARCHAR (20) NOT NULL,
@@ -49,9 +58,8 @@ def reiniciar(conexion):
                 Apellido VARCHAR (40) NOT NULL,
                 DNI VARCHAR (9) UNIQUE,
                 Telefono VARCHAR (9) NOT NULL,
-                Correo VARCHAR (40) NOT NULL
+                Correo VARCHAR (40) NOT NULL,
                 NumeroCuenta VARCHAR (24) NOT NULL,
-                IdentificadorSucursal VARCHAR (24),
                 PRIMARY KEY (DNI));''')
         
         cursor.execute('''CREATE TABLE TURNOS(
@@ -62,11 +70,22 @@ def reiniciar(conexion):
         
         cursor.execute('''CREATE TABLE SUCURSALES(
                 Direccion VARCHAR(40) NOT NULL,
-                ID_Sucursal VARCHAR (10) UNIQUE NOT NULL,
+                ID_Sucursal VARCHAR(10) UNIQUE NOT NULL,
                 PRIMARY KEY (ID_Sucursal));''')
+        
+        cursor.execute('''CREATE TABLE TRABAJA(
+                ID_Sucursal VARCHAR (10) NOT NULL,
+                DNI VARCHAR(9) NOT NULL,
+                FOREIGN KEY (ID_Sucursal) REFERENCES SUCURSALES(ID_Sucursal),
+                FOREIGN KEY (DNI) REFERENCES TRABAJADORES(DNI));''')
+
         conexion.commit()
     except mariadb.Error as error_tabla:
         print(f"Error al crear la tabla: {error_tabla}")
+
+##############################################################
+### SUBSISTEMA CLIENTES ###
+##############################################################
 
 def subsistemaClientes(conexion):
     cursor = conexion.cursor()
@@ -177,7 +196,10 @@ def modificarDatosClientes(conexion):
             conexion.commit()
             salir_mod_cli = True
 
-# EN OBRAS
+##############################################################
+### SUBSISTEMA SUCURSALES ###
+##############################################################
+
 def subsistemaSucursales(conexion):
     cursor = conexion.cursor()
     
@@ -208,7 +230,7 @@ def subsistemaSucursales(conexion):
             listarSucursales(conexion)
         elif (opcion_cli == 5):
             borrarPantalla()
-            consultarTrabajadores(conexion)
+            consultarTrabajadoresSucursal(conexion)
         elif (opcion_cli == 6):
             salir_cli = True
 
@@ -272,11 +294,205 @@ def listarSucursales(conexion):
             Direccion, ID_Sucursal = record
             print("{:<40} {:<10}".format(Direccion, ID_Sucursal))
         print("\nVolviendo al menú anterior.\n")
+
     except mariadb.Error as error_mostrar_sucursales:
         print("Error al mostrar las sucursales.\n")
         print(error_mostrar_sucursales, "\n")
 
+def asignarTrabajadores(conexion):
+    cursor = conexion.cursor()
+    cursor.execute("SAVEPOINT asignar_trabajador")
+    borrarPantalla()
+    
+    ID_Sucursal = input("Introduzca el ID de la sucursal a la que desee asignar un trabajador: ")
+    DNI = input("Introduzca el DNI del trabajador: ")
 
+    try:
+        cursor.execute("INSERT INTO TRABAJA (ID_Sucursal, DNI) VALUES('"+ID_Sucursal+"','"+DNI+"')")
+        print("\nEl trabajador ha sido asignado a la sucursal correctamente.")
+        print("\nVolviendo al menú anterior. \n")
+    except mariadb.Error as error_asignar_sucursal:
+        print("Ha fallado el proceso de asignación a una sucursal.\n")
+        print(error_asignar_sucursal, "\n")
+        cursor.execute("ROLLBACK to asignar_trabajador")
+    finally:
+        conexion.commit()
+
+def consultarTrabajadoresSucursal(conexion):
+    cursor = conexion.cursor()
+    borrarPantalla()
+    
+    ID_Sucursal = input("Introduzca el ID de una sucursal: ")
+    try:
+        query = "SELECT DISTINCT TRABAJADORES.NOMBRE, TRABAJADORES.APELLIDO FROM TRABAJADORES INNER JOIN TRABAJA ON TRABAJADORES.DNI=TRABAJA.DNI WHERE ID_SUCURSAL=8269813641"
+        cursor.execute(query)
+        records = cursor.fetchall()
+
+        print("\nLista de trabajadores de esta sucursal:\n")
+
+        print ("{:<40} {:<10}".format('Nombre','Apellido'))
+        for record in records:
+            Nombre, Apellido = record
+            print("{:<40} {:<10}".format(Nombre, Apellido))
+        print("\nVolviendo al menú anterior.\n")
+
+    except mariadb.Error as error_mostrar_trabajadores_sucursales:
+        print("Error al mostrar los trabajadores.\n")
+        print(error_mostrar_trabajadores_sucursales, "\n")
+
+##############################################################
+### SUBSISTEMA TRABAJADORES ###
+##############################################################
+
+def subsistemaTrabajadores(conexion):
+    cursor = conexion.cursor()
+    print("Usted a accedido al subsistema de gestión de Trabajadores")
+    salir_Tra = False
+    while not salir_Tra:
+        print("1.-Dar de alta a un nuevo trabajador")
+        print("2.-Dar de baja a un trabajador")
+        print("3.-Consultar datos personales de un trabajador")
+        print("4.-Modificar datos de un trabajador")
+        print("6.-Salir del subsistema Trabajadores")
+        opcion_Tra = int(input("Introduce el número de la operación a realizar: "))
+        if(opcion_Tra==1):
+            borrarPantalla()
+            darAltaTrabajador(conexion)
+        elif(opcion_Tra==2):
+            borrarPantalla()
+            darBajaTrabajador(conexion)
+        elif(opcion_Tra==3):
+            borrarPantalla()
+            consultarDatosTrabajadores(conexion)
+        elif(opcion_Tra==4):
+            borrarPantalla()
+            modificarDatosTrabajadores(conexion)
+        elif(opcion_Tra==6):
+            salir_Tra = True
+    
+def darAltaTrabajador(conexion):
+    cursor = conexion.cursor()
+    print("Usted está dando de alta a un nuevo trabajador")
+    cursor.execute("SAVEPOINT alta_trabajador")
+    Nombre=input("Introduzca el nombre del nuevo trabajador: ")
+    Apellido=input("Introduzca el apellido del nuevo trabajador: ")
+    DNI=input("Introduzca el DNI del nuevo trabajador: ")
+    Telefono=input("Introduzca el telefono del nuevo trabajador: ")
+    Correo=input("Introduzca la direccion de correo del nuevo trabajador: ")
+    NumeroCuenta=input("Introduzca el numero de cuenta del nuevo trabajador: ")
+    try:
+        cursor.execute("INSERT INTO TRABAJADORES (Nombre, Apellido, DNI, Telefono, Correo, NumeroCuenta) VALUES('"+Nombre+"','"+Apellido+"','"+DNI+"','"+Telefono+"','"+Correo+"','"+NumeroCuenta+"')")
+        borrarPantalla()
+        print("trabajador creado correctamente")
+        print()
+    except mariadb.Error as error_alta_trabajador:
+        borrarPantalla()
+        print("Ha fallado el proceso de alta del trabajador")
+        print(error_alta_trabajador)
+        cursor.execute("ROLLBACK to alta_trabajador")
+    finally:
+        conexion.commit()
+    
+def darBajaTrabajador(conexion):
+    cursor = conexion.cursor()
+    cursor.execute("SAVEPOINT baja_trabajador")
+    print("Usted está dando de baja a un trabajador")
+    DNI=input("Introduzca el DNI del trabajador: ")
+    try:
+        cursor.execute("DELETE FROM TRABAJADORES WHERE DNI='"+DNI+"'")
+        borrarPantalla()
+        print("Se ha dado de baja al trabajador correctamente")
+        print()
+    except mariadb.Error as error_baja_trabajador:
+        borrarPantalla()
+        print("Ha fallado el proceso de baja del trabajador")
+        print(error_baja_trabajador)
+        cursor.execute("ROLLBACK to baja_trabajador")
+    finally:
+        conexion.commit()
+
+def modificarDatosTrabajadores(conexion):
+    cursor = conexion.cursor()
+    print("Se encuentra usted en la funcionalidad de modificación de datos")
+    DNI = input("Introduzca el DNI del trabajador sobre el que quiere aplicar la modificacion de datos: ")
+    salir_mod_tra = False
+    while not salir_mod_tra:
+        print("1.-Modificar Nombre.")
+        print("2.-Modificar Apellidos.")
+        print("3.-Modificar Telefono.")
+        print("4.-Modificar Correo.")
+        print("5.-Modificar Nuemro de cuenta.")
+        print("6.-Salir.")
+        opcion_tra_mod = int(input("Introduce el número de la acción que desea llevar a cabo: "))
+        if opcion_tra_mod==1:
+            Nombre = input("Introduzca el nuevo nombre: ")
+            cursor.execute("UPDATE TRABAJADORES SET Nombre='"+Nombre+"' WHERE DNI='"+DNI+"'")
+            borrarPantalla()
+        elif opcion_tra_mod==2:
+            Apellido = input("Introduzca el nuevo apellido: ")
+            cursor.execute("UPDATE TRABAJADORES SET Apellido='"+Apellido+"' WHERE DNI='"+DNI+"'")
+            borrarPantalla()
+        elif opcion_tra_mod==3:
+            Telefono = input("Introduzca el nuevo número de telefono: ")
+            cursor.execute("UPDATE TRABAJADORES SET Telefono='"+Telefono+"' WHERE DNI='"+DNI+"'")
+            borrarPantalla()
+        elif opcion_tra_mod==4:
+            Correo=input("Introduzca la direccion de correo del nuevo trabajador: ")
+            cursor.execute("UPDATE TRABAJADORES SET Correo='"+Correo+"' WHERE DNI='"+DNI+"'")
+            borrarPantalla()
+        elif opcion_tra_mod==5:
+            NumeroCuenta=input("Introduzca el numero de cuenta del nuevo trabajador: ")
+            cursor.execute("UPDATE TRABAJADORES SET NumeroCuenta='"+NumeroCuenta+"' WHERE DNI='"+DNI+"'")
+            borrarPantalla()
+        elif opcion_tra_mod==6:
+            borrarPantalla()
+            conexion.commit()
+            salir_mod_tra = True
+
+def asignarTurno(conexion):
+    cursor = conexion.cursor()
+    print("Usted está asignando un horario a un trabajador")
+    cursor.execute("SAVEPOINT Turno")
+
+    DNI=input("Introduzca el DNI del nuevo trabajador: ")
+    print("Las fechas deben ingresarse con el iguiente formato 2012-04-19 13:08:22 y entre dobles comillas")
+    #Ejemplo Datetime("2012-04-19 13:08:22")
+    FechaInicio=input("Introduzca el inicio del turno: ")
+    FechaFin=input("Introduzca el final del turno: ")
+
+    try:
+        cursor.execute("INSERT INTO TURNOS (FechaInicio, FechaFin, DNI) VALUES('"+FechaInicio+"','"+FechaFin+"','"+DNI+"')")
+        borrarPantalla()
+        print("Turno creado correctamente")
+        print()
+    except mariadb.Error as error_Turno:
+        borrarPantalla()
+        print("Ha fallado la asignacion de turnos")
+        print(error_Turno)
+        cursor.execute("ROLLBACK to Turno")
+    finally:
+        conexion.commit()
+
+def consultarTrabajadoresLibres(conexion):
+    cursor=conexion.cursor()
+    cursor.execute("SAVEPOINT consulta_trabajador")
+    print("Las fechas deben ingresarse con el iguiente formato 2012-04-19 13:08:22 y entre dobles comillas")
+    FechaInicio=input("Introduzca el inicio del turno: ")
+    try:
+        cursor.execute("SELECT DNI FROM TRABAJADORES MINUS SELECT DNI FROM TURNOS where FechaInicio='"+FechaInicio+"'")
+        borrarPantalla()
+        usuario = cursor.fetchone()
+        print(usuario)
+        print()
+    except mariadb.Error as error_consulta_trabajador:
+        borrarPantalla()
+        print("Ha fallado el proceso de consulta de los trabajadores")
+        print(error_consulta_trabajador)
+        cursor.execute("ROLLBACK TO consulta_trabajador")
+
+##############################################################
+### MENÚ PRINCIPAL ###
+##############################################################
 
 # Nos conectamos a la base de datos
 
@@ -302,6 +518,7 @@ while not salir:
         reiniciar(cnx)
     elif opcion==2:
         borrarPantalla()
+        subsistemaTrabajadores(cnx)
     elif opcion==3:
         borrarPantalla()
         subsistemaClientes(cnx)
