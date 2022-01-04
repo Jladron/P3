@@ -421,7 +421,7 @@ def modificarDatosTrabajadores(conexion):
         print("2.-Modificar Apellidos.")
         print("3.-Modificar Telefono.")
         print("4.-Modificar Correo.")
-        print("5.-Modificar Nuemro de cuenta.")
+        print("5.-Modificar Número de cuenta.")
         print("6.-Salir.")
         opcion_tra_mod = int(input("Introduzca el número de la acción que desea llevar a cabo: "))
         if opcion_tra_mod==1:
