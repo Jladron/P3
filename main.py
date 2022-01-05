@@ -324,7 +324,7 @@ def consultarTrabajadoresSucursal(conexion):
     
     ID_Sucursal = input("Introduzca el ID de una sucursal: ")
     try:
-        query = "SELECT DISTINCT TRABAJADORES.NOMBRE, TRABAJADORES.APELLIDO FROM TRABAJADORES INNER JOIN TRABAJA ON TRABAJADORES.DNI=TRABAJA.DNI WHERE ID_SUCURSAL=8269813641"
+        query = "SELECT DISTINCT TRABAJADORES.NOMBRE, TRABAJADORES.APELLIDO FROM TRABAJADORES INNER JOIN TRABAJA ON TRABAJADORES.DNI=TRABAJA.DNI WHERE ID_SUCURSAL = ('"+ID_Sucursal+"')"
         cursor.execute(query)
         records = cursor.fetchall()
 
