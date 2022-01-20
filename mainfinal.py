@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 from contextlib import AsyncExitStack, aclosing
 from typing import final
 import mariadb
@@ -92,7 +93,6 @@ def reiniciar(conexion):
                 IBAN VARCHAR (24) UNIQUE,
                 DNI_prop VARCHAR (9) NOT NULL,
                 Saldo FLOAT,
-                FOREIGN KEY (DNI_prop) REFERENCES CLIENTES(DNI),
                 PRIMARY KEY (IBAN));
                 ''')
                         
@@ -229,7 +229,7 @@ def darAltaCliente(conexion):
         cursor.execute("INSERT INTO CUENTAS (IBAN, DNI_prop, Saldo) VALUES('"+IBAN+"','"+DNI+"', '"+str(saldo)+"')")
         print("Cuenta creada correctamente")
 
-        cursor.execute("INSERT INTO CUENTAS (DNI, IBAN) VALUES('"+DNI+"','"+IBAN+"')")
+        cursor.execute("INSERT INTO PERTENECE (DNI, IBAN) VALUES('"+DNI+"','"+IBAN+"')")
 
         print()
     except mariadb.Error as error_alta_cliente:
@@ -242,26 +242,22 @@ def darAltaCliente(conexion):
     
 def darBajaCliente(conexion):
     cursor = conexion.cursor()
-    cursor.execute("SAVEPOINT baja_cliente")
-    print("Usted está dando de baja a un cliente.")
-    DNI=input("Introduzca el DNI del cliente: ")
+    DNI = input("Introduzca el DNI del cliente que desea dar de baja: ")
     try:
-        cursor.execute("DELETE FROM CLIENTES WHERE DNI='"+DNI+"'")
-        cursor.execute("SELECT IBAN FROM CUENTAS where DNI_prop='"+DNI+"'")
-        IBAN = cursor.fetchone()
-        cursor.execute("SELECT Saldo FROM CUENTAS where IBAN='"+IBAN+"'")
-        saldo = str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",","")
-        cursor.execute("UPDATE CUENTAS SET saldo = (SELECT Saldo FROM CUENTAS where IBAN='"+IBAN+"') + (SELECT Saldo FROM CUENTAS where IBAN='000000000000000000000000') WHERE IBAN='000000000000000000000000';")
-        cursor.execute("DELETE FROM CUENTAS WHERE IBAN='"+IBAN+"'")
+        condicion = True
+        while condicion:
+            IBAN = str(str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",","").replace("'",""))
+            cursor.execute("DELETE FROM PERTENECE WHERE IBAN='"+IBAN+"'")
+            cursor.execute("DELETE FROM CUENTAS WHERE IBAN='"+IBAN+"'")
 
+        cursor.execute("DELETE FROM CLIENTES WHERE DNI='"+DNI+"'")
         borrarPantalla()
-        print("Se ha dado de baja al cliente correctamente.")
-        print()
+        print("Se ha dado de baja al cliente y todas sus cuentas. ")
+
     except mariadb.Error as error_baja_cliente:
         borrarPantalla()
-        print("Ha fallado el proceso de baja del cliente.")
+        print("Ha fallado el proceso de baja de cliente.")
         print(error_baja_cliente)
-        cursor.execute("ROLLBACK to baja_cliente")
     finally:
         conexion.commit()
 
@@ -701,6 +697,7 @@ def crearCuenta(conexion):
 
         saldo=0
         cursor.execute("INSERT INTO CUENTAS (IBAN, DNI_prop, Saldo) VALUES('"+IBAN+"','"+DNI+"', '"+str(saldo)+"')")
+        cursor.execute("INSERT INTO PERTENECE (DNI, IBAN) VALUES('"+DNI+"','"+IBAN+"')")
         borrarPantalla()
         print("Cuenta creada correctamente")
         print()
