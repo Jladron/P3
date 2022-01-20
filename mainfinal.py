@@ -13,7 +13,7 @@ from random import randint
 def conexion():
     try:
         #Aquí cambiais cada uno los valores para vuestras BD's locales
-        conn = mariadb.connect(user="root",password="rosquilla1",host="127.0.0.1",port=3306,database="practica3")
+        conn = mariadb.connect(user="root",password="Ha_2910",host="127.0.0.1",port=3306,database="practica3")
         print("Conectado a la base de datos.")
     except mariadb.Error as e:
         print(f"Error connecting to MariaDB Platform: {e}")
@@ -490,7 +490,7 @@ def subsistemaTrabajadores(conexion):
     while not salir_Tra:
         print("1.- Dar de alta a un nuevo trabajador.")
         print("2.- Dar de baja a un trabajador.")
-        print("3.- Consultar datos personales de un trabajador.")
+        print("3.- Consultar trabajadores libres.")
         print("4.- Modificar datos de un trabajador.")
         print("5.- Asignar turno a trabajador.")
         print("9.- Salir del Subsistema Trabajadores.\n")
@@ -622,7 +622,7 @@ def consultarTrabajadoresLibres(conexion):
     print("Las fechas deben ingresarse con el siguiente formato 2012-04-19 13:08:22 y entre dobles comillas.")
     FechaInicio=input("Introduzca el inicio del turno: ")
     try:
-        cursor.execute("SELECT DNI FROM TRABAJADORES MINUS SELECT DNI FROM TURNOS where FechaInicio='"+FechaInicio+"'")
+        cursor.execute("SELECT DNI FROM TRABAJADORES EXCEPT SELECT DNI FROM TURNOS where FechaInicio='"+FechaInicio+"'")
         borrarPantalla()
         usuario = cursor.fetchone()
         print(usuario)
@@ -638,7 +638,6 @@ def triggerTrabajadores(conexion):
 
     cursor.execute('''
                     CREATE DEFINER=`root`@`localhost` TRIGGER `trigger_trabajadores` BEFORE INSERT ON `turnos` FOR EACH ROW BEGIN
-
                         DECLARE rowcount INT;
                         SET rowcount = (SELECT COUNT(*)
                         FROM turnos
@@ -650,7 +649,6 @@ def triggerTrabajadores(conexion):
                         IF rowcount > 0 THEN
                             signal sqlstate '20000' set message_text = 'El turno declarado se sobrepone a uno existente';
                         END IF; 
-
                     END
                     ''')
 
@@ -668,7 +666,7 @@ def subsistemaCuentas(conexion):
         print("3.-Consultar saldo")
         print("4.-Modificar saldo")
         print("5.-Agregar servicio")
-        print("6.-Salir del subsistema cuentas")
+        print("9.-Salir del subsistema cuentas")
 
         opcion = int(input("Introduce el número de la operación a realizar: "))
 
@@ -815,6 +813,8 @@ def agregarServicio(conexion):
 
     try:
         IBAN = input("¿Que cuenta quiere vincular?: ")
+        for x in range(24-len(IBAN)):
+            IBAN = IBAN+"0"
         ID_servicio = input("¿Que servicio quiere vincular?: ")
         cursor.execute("INSERT INTO ASOCIA (IBAN, ID_SERVICIO) VALUES ('"+IBAN+"','"+ID_servicio+"')")
 
@@ -832,10 +832,8 @@ def triggerCuentas(conexion):
 
     cursor.execute('''
                     CREATE DEFINER=`root`@`localhost` TRIGGER `trigger_cuentas` BEFORE DELETE ON `cuentas` FOR EACH ROW BEGIN
-
                     INSERT INTO cuentas_borradas (IBAN, DNI_prop, Saldo)
                     VALUES (OLD.IBAN, OLD.DNI_prop, OLD.Saldo);
-
                     END
                     ''')
 
@@ -856,7 +854,7 @@ def subsistemaServicios(conexion):
         print("3.-MODIFICAR SERVICIO")
         print("4.-CONSULTAR SERVICIOS ACTIVOS")
         print("5.-CONSULTAR SERVICIOS INACTIVOS")
-        print("6.-VOLVER")
+        print("9.-VOLVER")
 
         opcion = int(input("INTRODUCE EL NUMERO DE LA OPCION: "))
         borrarPantalla()
@@ -878,7 +876,7 @@ def subsistemaServicios(conexion):
         
         elif opcion==5:
             consultarServiciosInactivos(conexion)
-        elif opcion==6:
+        elif opcion==9:
             salir = True
 
         else:
