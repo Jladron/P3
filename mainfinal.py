@@ -468,17 +468,16 @@ def triggerSucursales(conexion):
     cursor = conexion.cursor()
     
     cursor.execute('''
-                    CREATE DEFINER='root'@'localhost' TRIGER 'trigger_Sucursales'
+                    CREATE TRIGGER duplicadosSucursales
                         BEFORE INSERT on SUCURSALES
                         FOR EACH ROW
                     BEGIN
-                        IF EXISTS (SELECT DIRECCION FROM SUCURSALES WHERE DIRECCION = ('"+DIRECCION+"')) THEN
-                            signal sqlstate '23000' set message_text = 'La dirección postal introducida se encuentra en uso. Introduzca una nueva para poder completar el proceso.';
+                        DECLARE existente INT;
+                        SELECT count(*) INTO existente FROM SUCURSALES WHERE DIRECCION = NEW.DIRECCION;
+                        IF (existente > 0) THEN
+                            signal sqlstate '20000' set message_text = 'La dirección postal introducida se encuentra en uso. Introduzca una nueva para poder completar el proceso.';
                         END IF;
-                        IF EXISTS (SELECT ID_Sucursal FROM SUCURSALES WHERE ID_Sucursal = ('"+ID_Sucursal+"')) THEN
-                            signal sqlstate '23600' set message_text = 'Ha fallado el proceso de asignación de ID para la sucursal. Inténtelo de nuevo.';
-                        END IF;
-                     END;''')
+                    END;''')
                           
 ##############################################################
 ### SUBSISTEMA TRABAJADORES ###
