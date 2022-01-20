@@ -432,7 +432,7 @@ def consultarTrabajadoresSucursal(conexion):
         print("Error al mostrar los trabajadores.\n")
         print(error_mostrar_trabajadores_sucursales, "\n")
 
- def triggerSucursales(conexion):
+def triggerSucursales(conexion):
     cursor = conexion.cursor()
     
     cursor.execute('''
