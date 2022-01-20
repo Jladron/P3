@@ -1,8 +1,3 @@
-
-# Para reiniciar tablas
-
-
-
 from contextlib import AsyncExitStack, aclosing
 from typing import final
 import mariadb
@@ -46,17 +41,18 @@ def reiniciar(conexion):
     try:
         cursor = conexion.cursor()
 
-        #Si no estan creadas comentar el drop
+        #Borramos todas las tablas
         cursor.execute("DROP TABLE IF EXISTS ASOCIA")
         cursor.execute('''DROP TABLE IF EXISTS TRABAJA;''')
         cursor.execute('''DROP TABLE IF EXISTS TURNOS;''')
         cursor.execute("DROP TABLE IF EXISTS CUENTAS")
+        cursor.execute("DROP TABLE IF EXISTS CUENTAS_BORRADAS")
         cursor.execute("DROP TABLE IF EXISTS SUCURSALES")
         cursor.execute('''DROP TABLE IF EXISTS TRABAJADORES;''')
         cursor.execute("DROP TABLE IF EXISTS CLIENTES;")        
         cursor.execute("DROP TABLE IF EXISTS SERVICIOS")
         
-
+        #Creamos todas las tablas
         cursor.execute('''CREATE TABLE SERVICIOS(
                 ID VARCHAR (20) UNIQUE,
                 PRIMARY KEY (ID));
@@ -90,6 +86,14 @@ def reiniciar(conexion):
                 FOREIGN KEY (DNI_prop) REFERENCES CLIENTES(DNI),
                 PRIMARY KEY (IBAN));
                 ''')
+
+        cursor.execute('''CREATE TABLE CUENTAS_BORRADAS(
+                IBAN VARCHAR (24) UNIQUE,
+                DNI_prop VARCHAR (9) NOT NULL,
+                Saldo FLOAT,
+                FOREIGN KEY (DNI_prop) REFERENCES CLIENTES(DNI),
+                PRIMARY KEY (IBAN));
+                ''')
                         
         cursor.execute('''CREATE TABLE TURNOS(
                 FechaInicio DATETIME,
@@ -111,15 +115,17 @@ def reiniciar(conexion):
                 FOREIGN KEY (ID_SERVICIO) REFERENCES SERVICIOS(ID));
                 ''')
 
+        #Triggers
+        triggerCuentas(conexion)
+        triggerTrabajadores(conexion)
+
+        #Tuplas para pruebas
+        #Dueño del banco
         cursor.execute('''INSERT INTO CLIENTES (Nombre, Apellido, DNI, Telefono) VALUES
                 ('José',
                 'Morón',
                 '77148388V',
                 '722445823')''')
-
-        cursor.execute('''INSERT INTO SERVICIOS (ID) VALUES ('0')
-                '''
-        )
 
         #Cuenta del banco                
         cursor.execute('''INSERT INTO CUENTAS (IBAN, DNI_prop, Saldo) VALUES
@@ -127,7 +133,33 @@ def reiniciar(conexion):
                 '77148388V',
                 '99999')''')
 
-        #triggerCuentas(conexion)
+        #Cuentas de prueba
+        cursor.execute('''INSERT INTO CUENTAS (IBAN, DNI_prop, Saldo) VALUES
+                ('100000000000000000000000',
+                '77148388V',
+                '100')''')
+        cursor.execute('''INSERT INTO CUENTAS (IBAN, DNI_prop, Saldo) VALUES
+                ('200000000000000000000000',
+                '77148388V',
+                '-100')''')
+
+        #Primer trabajador
+        cursor.execute('''INSERT INTO TRABAJADORES (Nombre, Apellido, DNI, Telefono, Correo, NumeroCuenta) VALUES
+                ('Domingo',
+                'Rodriguez',
+                '69876955T',
+                '698584237',
+                'drodriguez@gmail.com',
+                '100000000000000000000000')''')
+
+        #Turno del primer trabajador
+        cursor.execute('''INSERT INTO TURNOS (FechaInicio, FechaFin, DNI) VALUES
+                ("2022-01-19 12:00:00", "2023-01-19 12:00:00", '69876955T')''')
+
+        #Servicio basico
+        cursor.execute('''INSERT INTO SERVICIOS (ID) VALUES ('0')
+                '''
+        )
 
         conexion.commit()
     except mariadb.Error as error_tabla:
@@ -146,7 +178,7 @@ def subsistemaClientes(conexion):
         print("2.- Dar de baja a un cliente.")
         print("3.- Consultar datos personales de un cliente.")
         print("4.- Modificar datos de un cliente.")
-        print("6.- Salir del subsistema clientes.")
+        print("9.- Salir del subsistema clientes.")
         opcion_cli = int(input("Introduzca el número de la operación a realizar: "))
         if(opcion_cli==1):
             borrarPantalla()
@@ -160,7 +192,7 @@ def subsistemaClientes(conexion):
         elif(opcion_cli==4):
             borrarPantalla()
             modificarDatosClientes(conexion)
-        elif(opcion_cli==6):
+        elif(opcion_cli==9):
             salir_cli = True
     
 def darAltaCliente(conexion):
@@ -262,7 +294,7 @@ def subsistemaSucursales(conexion):
         print ("3.- Asignar trabajadores a una sucursal.")
         print ("4.- Listar sucursales.")
         print ("5.- Consultar trabajadores de una sucursal.")
-        print ("6.- Salir del Subsistema de Sucursales.\n")
+        print ("9.- Salir del Subsistema de Sucursales.\n")
 
         opcion_cli = int(input("Introduzca la opción a la que quiera acceder: "))
 
@@ -281,7 +313,7 @@ def subsistemaSucursales(conexion):
         elif (opcion_cli == 5):
             borrarPantalla()
             consultarTrabajadoresSucursal(conexion)
-        elif (opcion_cli == 6):
+        elif (opcion_cli == 9):
             salir_cli = True
 
 def random_n_digitos(n):
@@ -374,7 +406,7 @@ def consultarTrabajadoresSucursal(conexion):
     
     ID_Sucursal = input("Introduzca el ID de una sucursal: ")
     try:
-        query = "SELECT DISTINCT TRABAJADORES.NOMBRE, TRABAJADORES.APELLIDO FROM TRABAJADORES INNER JOIN TRABAJA ON TRABAJADORES.DNI=TRABAJA.DNI WHERE ID_SUCURSAL = ('"+ID_Sucursal+"')"
+        query = "SELECT DISTINCT TRABAJADORES.NOMBRE, TRABAJADORES.APELLIDO FROM TRABAJADORES INNER JOIN TRABAJA ON TRABAJADORES.DNI=TRABAJA.DNI WHERE ID_SUCURSAL=8269813641"
         cursor.execute(query)
         records = cursor.fetchall()
 
@@ -403,7 +435,8 @@ def subsistemaTrabajadores(conexion):
         print("2.- Dar de baja a un trabajador.")
         print("3.- Consultar datos personales de un trabajador.")
         print("4.- Modificar datos de un trabajador.")
-        print("6.- Salir del Subsistema Trabajadores.\n")
+        print("5.- Asignar turno a trabajador.")
+        print("9.- Salir del Subsistema Trabajadores.\n")
         opcion_Tra = int(input("Introduzca el número de la operación a realizar: "))
         if(opcion_Tra==1):
             borrarPantalla()
@@ -413,11 +446,14 @@ def subsistemaTrabajadores(conexion):
             darBajaTrabajador(conexion)
         elif(opcion_Tra==3):
             borrarPantalla()
-            consultarDatosTrabajadores(conexion)
+            consultarTrabajadoresLibres(conexion)
         elif(opcion_Tra==4):
             borrarPantalla()
             modificarDatosTrabajadores(conexion)
-        elif(opcion_Tra==6):
+        elif(opcion_Tra==5):
+            borrarPantalla()
+            asignarTurno(conexion)
+        elif(opcion_Tra==9):
             salir_Tra = True
     
 def darAltaTrabajador(conexion):
@@ -540,6 +576,27 @@ def consultarTrabajadoresLibres(conexion):
         print(error_consulta_trabajador)
         cursor.execute("ROLLBACK TO consulta_trabajador")
 
+def triggerTrabajadores(conexion):
+    cursor = conexion.cursor()
+
+    cursor.execute('''
+                    CREATE DEFINER=`root`@`localhost` TRIGGER `trigger_trabajadores` BEFORE INSERT ON `turnos` FOR EACH ROW BEGIN
+
+                        DECLARE rowcount INT;
+                        SET rowcount = (SELECT COUNT(*)
+                        FROM turnos
+                        WHERE((DNI = NEW.DNI) 
+                        AND((NEW.FechaInicio BETWEEN FechaInicio AND FechaFin)
+                        OR (NEW.FechaFin BETWEEN FechaInicio AND FechaFin))
+                        ));
+                            
+                        IF rowcount > 0 THEN
+                            signal sqlstate '20000' set message_text = 'El turno declarado se sobrepone a uno existente';
+                        END IF; 
+
+                    END
+                    ''')
+
 ##############################################################
 ### SUBSISTEMA CUENTAS ###
 ##############################################################
@@ -573,7 +630,7 @@ def subsistemaCuentas(conexion):
         elif(opcion==5):
             borrarPantalla()
             agregarServicio(conexion)
-        elif(opcion==6):
+        elif(opcion==9):
             borrarPantalla()
             salir_cuentas = True
 
@@ -584,11 +641,13 @@ def crearCuenta(conexion):
     DNI=input("Introduzca el DNI del propietario de la cuenta: ")
 
     try:
-        #El IBAN es incremental, depende del numero de cuenta que haya creadas
+        #El IBAN es incremental, depende del numero de cuenta que hayan sido creadas
         cursor.execute("SELECT COUNT(IBAN) FROM cuentas")
-        IBAN = str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",","")
-        for x in range(24-len(IBAN)):
-            IBAN = IBAN+"0"
+        IBAN = int(str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",",""))
+        cursor.execute("SELECT COUNT(IBAN) FROM cuentas_borradas")
+        IBAN = IBAN + int(str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",",""))
+        for x in range(24-len(str(IBAN))):
+            IBAN = str(IBAN)+"0"
         
         cursor.close()
         cursor = conexion.cursor()
@@ -600,7 +659,7 @@ def crearCuenta(conexion):
         print()
     except mariadb.Error as error_crear_cuenta:
         borrarPantalla()
-        print("Ha fallado el proceso de creación de la cuenta")
+        print("Ha fallado el proceso de creación de la cuenta, asegurese de que el propietario de la cuenta sea cliente.")
         print(error_crear_cuenta)
         cursor.execute("ROLLBACK TO crear_cuenta")
     finally:
@@ -612,10 +671,19 @@ def eliminarCuenta(conexion):
     cursor.execute("SAVEPOINT eliminar_cuenta")
     print("Usted está eliminando una cuenta")
     IBAN=input("Introduzca el IBAN de la cuenta: ")
+    for x in range(24-len(IBAN)):
+            IBAN = IBAN+"0"
     try:
-        cursor.execute("DELETE FROM CUENTAS WHERE IBAN='"+IBAN+"'")
-        borrarPantalla()
-        print("Se ha eliminado la cuenta correctamente")
+        cursor.execute("SELECT Saldo FROM CUENTAS where IBAN='"+IBAN+"'")
+        saldo = str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",","")
+        if float(saldo) >= 0 : 
+            cursor.execute("UPDATE CUENTAS SET saldo = (SELECT Saldo FROM CUENTAS where IBAN='"+IBAN+"') + (SELECT Saldo FROM CUENTAS where IBAN='000000000000000000000000') WHERE IBAN='000000000000000000000000';")
+            cursor.execute("DELETE FROM CUENTAS WHERE IBAN='"+IBAN+"'")
+            borrarPantalla()
+            print("Se ha eliminado la cuenta correctamente")
+        else:
+            cursor.execute("ROLLBACK to eliminar_cuenta")
+            print("No puede eliminar una cuenta con saldo negativo")
         print()
     except mariadb.Error as error_eliminar_cuenta:
         borrarPantalla()
@@ -705,25 +773,13 @@ def agregarServicio(conexion):
 def triggerCuentas(conexion):
     cursor = conexion.cursor()
 
-    cursor.execute("SELECT saldo FROM CUENTAS WHERE IBAN='000000000000000000000000'")
-
-    saldo_actual = float(str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",",""))
-
-
-    #saldo = saldo_actual + float(input("Indique la cantidad a ingresar/retirar(-): "))
-
     cursor.execute('''
-                    CREATE OR REPLACE DEFINER='root'@'localhost' TRIGGER saldo_a_banco
-                    BEFORE DELETE ON cuentas FOR EACH ROW
+                    CREATE DEFINER=`root`@`localhost` TRIGGER `trigger_cuentas` BEFORE DELETE ON `cuentas` FOR EACH ROW BEGIN
 
-                    BEGIN
-                        DECLARE banco_IBAN FLOAT
-                        SELECT saldo FROM CUENTAS WHERE IBAN=000000000000000000000000 INTO banco_IBAN;
+                    INSERT INTO cuentas_borradas (IBAN, DNI_prop, Saldo)
+                    VALUES (OLD.IBAN, OLD.DNI_prop, OLD.Saldo);
 
-                        UPDATE CUENTAS SET Saldo='banco_IBAN+OLD.saldo'
-                            WHERE IBAN='000000000000000000000000'
-
-                    END;
+                    END
                     ''')
 
 ##############################################################
@@ -739,34 +795,34 @@ while not salir:
     borrarPantalla()
     print("¡Bienvenido al Sistema Informático del Banco de España! Esperamos que no nos robe el oro.")
     print("\nA continuación se le muestran las opciones disponibles:")
-    print("1.- REINICIAR")
-    print("2.- SUBSISTEMA TRABAJADORES")
-    print("3.- SUBSISTEMA CLIENTES")
-    print("4.- SUBSISTEMA SERVICIOS")
-    print("5.- SUBSISTEMA CUENTAS")
-    print("6.- SUBSISTEMA SUCURSALES")
-    print("7.- SALIR")
+    print("0.- REINICIAR")
+    print("1.- SUBSISTEMA TRABAJADORES")
+    print("2.- SUBSISTEMA CLIENTES")
+    print("3.- SUBSISTEMA SERVICIOS")
+    print("4.- SUBSISTEMA CUENTAS")
+    print("5.- SUBSISTEMA SUCURSALES")
+    print("9.- SALIR")
 
     opcion = int(input("\nIntroduzca el número del subsistema al que desea acceder: "))
 
-    if opcion==1:
+    if opcion==0:
         borrarPantalla()
         reiniciar(cnx)
-    elif opcion==2:
+    elif opcion==1:
         borrarPantalla()
         subsistemaTrabajadores(cnx)
-    elif opcion==3:
+    elif opcion==2:
         borrarPantalla()
         subsistemaClientes(cnx)
+    elif opcion==3:
+        borrarPantalla()
     elif opcion==4:
         borrarPantalla()
+        subsistemaCuentas(cnx)
     elif opcion==5:
         borrarPantalla()
-        subsistemaCuentas(cnx)
-    elif opcion==6:
-        borrarPantalla()
         subsistemaSucursales(cnx)
-    elif opcion==7:
+    elif opcion==9:
         desconexion(cnx)
         salir = True
     else:
