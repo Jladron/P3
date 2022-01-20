@@ -13,7 +13,7 @@ from random import randint
 def conexion():
     try:
         #Aquí cambiais cada uno los valores para vuestras BD's locales
-        conn = mariadb.connect(user="root",password="Ha_2910",host="127.0.0.1",port=3306,database="practica3")
+        conn = mariadb.connect(user="root",password="rosquilla1",host="127.0.0.1",port=3306,database="practica3")
         print("Conectado a la base de datos.")
     except mariadb.Error as e:
         print(f"Error connecting to MariaDB Platform: {e}")
@@ -42,15 +42,16 @@ def reiniciar(conexion):
         cursor = conexion.cursor()
 
         #Borramos todas las tablas
-        cursor.execute("DROP TABLE IF EXISTS ASOCIA")
+        cursor.execute('''DROP TABLE IF EXISTS ASOCIA''')
         cursor.execute('''DROP TABLE IF EXISTS TRABAJA;''')
         cursor.execute('''DROP TABLE IF EXISTS TURNOS;''')
-        cursor.execute("DROP TABLE IF EXISTS CUENTAS")
-        cursor.execute("DROP TABLE IF EXISTS CUENTAS_BORRADAS")
-        cursor.execute("DROP TABLE IF EXISTS SUCURSALES")
+        cursor.execute('''DROP TABLE IF EXISTS CUENTAS''')
+        cursor.execute('''DROP TABLE IF EXISTS CUENTAS_BORRADAS''')
+        cursor.execute('''DROP TABLE IF EXISTS SUCURSALES''')
         cursor.execute('''DROP TABLE IF EXISTS TRABAJADORES;''')
-        cursor.execute("DROP TABLE IF EXISTS CLIENTES;")        
-        cursor.execute("DROP TABLE IF EXISTS SERVICIOS")
+        cursor.execute('''DROP TABLE IF EXISTS CLIENTES;''')        
+        cursor.execute('''DROP TABLE IF EXISTS SERVICIOS''')
+        cursor.execute('''DROP TABLE IF EXISTS PERTENECE;''')
         
         #Creamos todas las tablas
         cursor.execute('''CREATE TABLE SERVICIOS(
@@ -115,6 +116,13 @@ def reiniciar(conexion):
                 FOREIGN KEY (ID_SERVICIO) REFERENCES SERVICIOS(ID));
                 ''')
 
+        cursor.execute('''CREATE TABLE PERTENECE(
+                DNI VARCHAR (9) NOT NULL,
+                IBAN VARCHAR (24) UNIQUE NOT NULL,
+                FOREIGN KEY (IBAN) REFERENCES CUENTAS(IBAN),
+                FOREIGN KEY (DNI) REFERENCES CLIENTES(DNI),
+                PRIMARY KEY (DNI, IBAN));''')
+
         #Triggers
         triggerCuentas(conexion)
         triggerTrabajadores(conexion)
@@ -178,6 +186,7 @@ def subsistemaClientes(conexion):
         print("2.- Dar de baja a un cliente.")
         print("3.- Consultar datos personales de un cliente.")
         print("4.- Modificar datos de un cliente.")
+        print("5.- Listar cuentas de un cliente. ")
         print("9.- Salir del subsistema clientes.")
         opcion_cli = int(input("Introduzca el número de la operación a realizar: "))
         if(opcion_cli==1):
