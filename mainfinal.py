@@ -10,7 +10,7 @@ from random import randint
 ##############################################################
 ### CONEXIÓN ###
 ##############################################################
-
+#VERSION A PRUEBA DE FRAN
 def conexion():
     try:
         #Aquí cambiais cada uno los valores para vuestras BD's locales
