@@ -216,6 +216,20 @@ def darAltaCliente(conexion):
         cursor.execute("INSERT INTO CLIENTES (Nombre, Apellido, DNI, Telefono) VALUES('"+Nombre+"','"+Apellido+"','"+DNI+"','"+Telefono+"')")
         borrarPantalla()
         print("Cliente creado correctamente")
+        cursor.execute("SELECT COUNT(IBAN) FROM cuentas")
+        IBAN = int(str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",",""))
+        cursor.execute("SELECT COUNT(IBAN) FROM cuentas_borradas")
+        IBAN = IBAN + int(str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",",""))
+        for x in range(24-len(str(IBAN))):
+            IBAN = str(IBAN)+"0"
+        cursor.close()
+        cursor = conexion.cursor()
+        saldo=0
+        cursor.execute("INSERT INTO CUENTAS (IBAN, DNI_prop, Saldo) VALUES('"+IBAN+"','"+DNI+"', '"+str(saldo)+"')")
+        print("Cuenta creada correctamente")
+
+        cursor.execute("INSERT INTO CUENTAS (DNI, IBAN) VALUES('"+DNI+"','"+IBAN+"')")
+
         print()
     except mariadb.Error as error_alta_cliente:
         borrarPantalla()
@@ -232,6 +246,13 @@ def darBajaCliente(conexion):
     DNI=input("Introduzca el DNI del cliente: ")
     try:
         cursor.execute("DELETE FROM CLIENTES WHERE DNI='"+DNI+"'")
+        cursor.execute("SELECT IBAN FROM CUENTAS where DNI_prop='"+DNI+"'")
+        IBAN = cursor.fetchone()
+        cursor.execute("SELECT Saldo FROM CUENTAS where IBAN='"+IBAN+"'")
+        saldo = str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",","")
+        cursor.execute("UPDATE CUENTAS SET saldo = (SELECT Saldo FROM CUENTAS where IBAN='"+IBAN+"') + (SELECT Saldo FROM CUENTAS where IBAN='000000000000000000000000') WHERE IBAN='000000000000000000000000';")
+        cursor.execute("DELETE FROM CUENTAS WHERE IBAN='"+IBAN+"'")
+
         borrarPantalla()
         print("Se ha dado de baja al cliente correctamente.")
         print()
