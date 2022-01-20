@@ -13,7 +13,7 @@ from random import randint
 def conexion():
     try:
         #Aquí cambiais cada uno los valores para vuestras BD's locales
-        conn = mariadb.connect(user="root",password="Ha_2910",host="127.0.0.1",port=3306,database="practica3")
+        conn = mariadb.connect(user="root",password="rosquilla1",host="127.0.0.1",port=3306,database="practica3")
         print("Conectado a la base de datos.")
     except mariadb.Error as e:
         print(f"Error connecting to MariaDB Platform: {e}")
@@ -133,6 +133,7 @@ def reiniciar(conexion):
         triggerTrabajadores(conexion)
         triggerSucursales(conexion)
         triggerServicios(conexion)
+        triggerClientes(conexion)
         
         #Tuplas para pruebas
         #Dueño del banco
@@ -213,6 +214,8 @@ def subsistemaClientes(conexion):
         elif(opcion_cli==4):
             borrarPantalla()
             modificarDatosClientes(conexion)
+        elif(opcion_cli==5):
+            borrarPantalla()
         elif(opcion_cli==9):
             salir_cli = True
     
@@ -240,7 +243,7 @@ def darAltaCliente(conexion):
         cursor.execute("INSERT INTO CUENTAS (IBAN, DNI_prop, Saldo) VALUES('"+IBAN+"','"+DNI+"', '"+str(saldo)+"')")
         print("Cuenta creada correctamente")
 
-        cursor.execute("INSERT INTO CUENTAS (DNI, IBAN) VALUES('"+DNI+"','"+IBAN+"')")
+        cursor.execute("INSERT INTO PERTENECE (DNI, IBAN) VALUES('"+DNI+"','"+IBAN+"')")
 
         print()
     except mariadb.Error as error_alta_cliente:
@@ -253,26 +256,18 @@ def darAltaCliente(conexion):
     
 def darBajaCliente(conexion):
     cursor = conexion.cursor()
-    cursor.execute("SAVEPOINT baja_cliente")
-    print("Usted está dando de baja a un cliente.")
-    DNI=input("Introduzca el DNI del cliente: ")
+    DNI = input("Introduzca el DNI del cliente que desea dar de baja: ")
     try:
+        cursor.execute("DELETE FROM PERTENECE WHERE DNI='"+DNI+"'")
+        cursor.execute("DELETE FROM CUENTAS WHERE DNI_prop='"+DNI+"'")
         cursor.execute("DELETE FROM CLIENTES WHERE DNI='"+DNI+"'")
-        cursor.execute("SELECT IBAN FROM CUENTAS where DNI_prop='"+DNI+"'")
-        IBAN = cursor.fetchone()
-        cursor.execute("SELECT Saldo FROM CUENTAS where IBAN='"+IBAN+"'")
-        saldo = str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",","")
-        cursor.execute("UPDATE CUENTAS SET saldo = (SELECT Saldo FROM CUENTAS where IBAN='"+IBAN+"') + (SELECT Saldo FROM CUENTAS where IBAN='000000000000000000000000') WHERE IBAN='000000000000000000000000';")
-        cursor.execute("DELETE FROM CUENTAS WHERE IBAN='"+IBAN+"'")
-
         borrarPantalla()
-        print("Se ha dado de baja al cliente correctamente.")
-        print()
+        print("Se ha dado de baja al cliente y todas sus cuentas. ")
+
     except mariadb.Error as error_baja_cliente:
         borrarPantalla()
-        print("Ha fallado el proceso de baja del cliente.")
+        print("Ha fallado el proceso de baja de cliente.")
         print(error_baja_cliente)
-        cursor.execute("ROLLBACK to baja_cliente")
     finally:
         conexion.commit()
 
@@ -291,6 +286,7 @@ def consultarDatosClientes(conexion):
         print("Ha fallado el proceso de consulta de datos del cliente.")
         print(error_consulta_cliente)
         cursor.execute("ROLLBACK TO consulta_cliente")
+
 
 def modificarDatosClientes(conexion):
     cursor = conexion.cursor()
@@ -319,6 +315,31 @@ def modificarDatosClientes(conexion):
             borrarPantalla()
             conexion.commit()
             salir_mod_cli = True
+
+def listar_cuentas_cliente(conexion):
+    cursor=conexion.cursor()
+    cursor.execute("SAVEPOINT consulta_cuentas")
+    DNI = input("Introduzca el DNI del cliente sobre el que desea ver los datos: ")
+    try:
+        cursor.execute("SELECT IBAN FROM CUENTAS where DNI_prop='"+DNI+"'")
+        IBAN = str(cursor.fetchone())
+        print(IBAN)
+    except mariadb.Error as error_consulta_cuentas:
+        borrarPantalla()
+        print("Ha fallado el proceso de consulta de las cuentas del cliente.")
+        print(error_consulta_cuentas)
+        cursor.execute("ROLLBACK TO consulta_cuentas")
+
+def triggerClientes(conexion):
+    cursor = conexion.cursor()
+
+    cursor.execute('''CREATE DEFINER=`root`@`localhost` TRIGGER `trigger_clientes` BEFORE INSERT ON `clientes` FOR EACH ROW BEGIN
+	DECLARE existente INT;
+	SELECT count(*) INTO existente FROM CLIENTES WHERE DNI = NEW.DNI;
+      IF (existente > 0) THEN                 
+			signal sqlstate '20000' set message_text = 'El cliente introducido ya existe. Introduzca uno nuevo para poder completar el proceso.';
+      END IF;
+END''')
 
 ##############################################################
 ### SUBSISTEMA SUCURSALES ###
