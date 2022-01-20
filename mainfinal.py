@@ -22,7 +22,6 @@ def conexion():
     finally:
         return conn
 
-
 def desconexion(conn):
     conn.commit()
     conn.close()
@@ -44,26 +43,22 @@ def reiniciar(conexion):
         cursor = conexion.cursor()
 
         #Borramos todas las tablas
-        cursor.execute('''DROP TABLE IF EXISTS PERTENECE;''')
         cursor.execute('''DROP TABLE IF EXISTS ASOCIA''')
         cursor.execute('''DROP TABLE IF EXISTS TRABAJA;''')
         cursor.execute('''DROP TABLE IF EXISTS TURNOS;''')
-        cursor.execute('''DROP TABLE IF EXISTS SERVICIOS''')
         cursor.execute('''DROP TABLE IF EXISTS CUENTAS''')
         cursor.execute('''DROP TABLE IF EXISTS CUENTAS_BORRADAS''')
         cursor.execute('''DROP TABLE IF EXISTS SUCURSALES''')
         cursor.execute('''DROP TABLE IF EXISTS TRABAJADORES;''')
         cursor.execute('''DROP TABLE IF EXISTS CLIENTES;''')        
-        
-        
+        cursor.execute('''DROP TABLE IF EXISTS SERVICIOS''')
+        cursor.execute('''DROP TABLE IF EXISTS PERTENECE;''')
         
         #Creamos todas las tablas
-        cursor.execute('''CREATE TABLE servicios (
-                id_servicio int(20) UNIQUE NOT NULL AUTO_INCREMENT,
-                nombre_servicio varchar(40) NOT NULL,
-                descripcion varchar(1000) NOT NULL,
-                estado enum('activo','inactivo'),
-                PRIMARY KEY (id_servicio));''')
+        cursor.execute('''CREATE TABLE SERVICIOS(
+                ID VARCHAR (20) UNIQUE,
+                PRIMARY KEY (ID));
+                ''')
         
         cursor.execute('''CREATE TABLE CLIENTES(
                 Nombre VARCHAR (20) NOT NULL,
@@ -93,14 +88,14 @@ def reiniciar(conexion):
                 FOREIGN KEY (DNI_prop) REFERENCES CLIENTES(DNI),
                 PRIMARY KEY (IBAN));
                 ''')
-       
+
         cursor.execute('''CREATE TABLE CUENTAS_BORRADAS(
                 IBAN VARCHAR (24) UNIQUE,
                 DNI_prop VARCHAR (9) NOT NULL,
                 Saldo FLOAT,
                 PRIMARY KEY (IBAN));
                 ''')
-                    
+                        
         cursor.execute('''CREATE TABLE TURNOS(
                 FechaInicio DATETIME,
                 FechaFin DATETIME,
@@ -112,15 +107,15 @@ def reiniciar(conexion):
                 DNI VARCHAR(9) NOT NULL,
                 FOREIGN KEY (ID_Sucursal) REFERENCES SUCURSALES(ID_Sucursal),
                 FOREIGN KEY (DNI) REFERENCES TRABAJADORES(DNI));''')
-        
+                
         cursor.execute('''CREATE TABLE ASOCIA(
-            IBAN VARCHAR (24) NOT NULL,
-            ID_SERVICIO INT (20) NOT NULL,
-            PRIMARY KEY (IBAN, ID_SERVICIO),
-            FOREIGN KEY (IBAN) REFERENCES CUENTAS(IBAN),
-            FOREIGN KEY (ID_SERVICIO) REFERENCES SERVICIOS(ID_SERVICIO));
-        ''')
-        
+                IBAN VARCHAR (24) NOT NULL,
+                ID_SERVICIO VARCHAR (20) NOT NULL,
+                PRIMARY KEY (IBAN, ID_SERVICIO),
+                FOREIGN KEY (IBAN) REFERENCES CUENTAS(IBAN),
+                FOREIGN KEY (ID_SERVICIO) REFERENCES SERVICIOS(ID));
+                ''')
+
         cursor.execute('''CREATE TABLE PERTENECE(
                 DNI VARCHAR (9) NOT NULL,
                 IBAN VARCHAR (24) UNIQUE NOT NULL,
@@ -132,15 +127,14 @@ def reiniciar(conexion):
         triggerCuentas(conexion)
         triggerTrabajadores(conexion)
         triggerSucursales(conexion)
-        triggerServicios(conexion)
-        
+
         #Tuplas para pruebas
         #Dueño del banco
         cursor.execute('''INSERT INTO CLIENTES (Nombre, Apellido, DNI, Telefono) VALUES
                 ('José',
                 'Morón',
                 '77148388V',
-                '722445823');''')
+                '722445823')''')
 
         #Cuenta del banco                
         cursor.execute('''INSERT INTO CUENTAS (IBAN, DNI_prop, Saldo) VALUES
@@ -171,16 +165,11 @@ def reiniciar(conexion):
         cursor.execute('''INSERT INTO TURNOS (FechaInicio, FechaFin, DNI) VALUES
                 ("2022-01-19 12:00:00", "2023-01-19 12:00:00", '69876955T')''')
 
-        #Servicios basico
-        cursor.execute('''INSERT INTO SERVICIOS (id_servicio, nombre_servicio, descripcion, estado) VALUES
-        (1, 'tarjeta de crédito', 'tarjeta de crédito para realizar pagos por tpv, el servicio es gratuito siempre que se domicilie la nómina, 3 recibos y 28 seguros.',null),
-        (2, 'préstamo coche', 'Préstamo para coche al módico interés del 19% no vaya a ser que nos denuncien por usura, también tendrás que contratar un seguro de coche carísimo sin apenas coberturas, obviamente esto es ilegal pero no lo reconoceremos simplemente si te acoges a tu derecho de no contratar el seguro nosotros nos acogeremos al nuestro de no concederte el crédito', null),
-        (3, 'hipoteca', 'Hipoteca basura al 4% fijo más variable sujeto al euribor (siempre que este sea positivo), en caso de colapso financiero venderemos tu hipoteca al banco malo y que se encargue el estado con dinero público, ya sabes la banca nunca pierde', null),
-        (4, 'tarjeta de débito', 'tarjeta para poder realizar pagos como la de crédito con la ventaja de que te puedes endeudar por encima de tus posibilidades sin problemas hasta 1200€, si crees que nos es mucho y que no hace daño estás completamente equivocado si no pagas tu cuota llamaremos hasta a tus vecinos \"Equivocándonos sin malicia\" por no contar con los recargos abusivos que sobrepasan el 20%, si quieres ver el verdadero poder del interés compuesto no tienes más que contratar esta tarjeta.', null),
-        (5, 'prestamo ICO', 'prestamos a interés nulo proporcionados por el gobierno y Europa para ayudar a las empresas a financiarse, esto para nosotros es un engorro administrativo y carece de sentido por eso ponemos muchas trabas.', null),
-        (6, 'prestamo personal proyecto', 'préstamo para acometer proyectos absurdos', null)
-        ''')
-        
+        #Servicio basico
+        cursor.execute('''INSERT INTO SERVICIOS (ID) VALUES ('0')
+                '''
+        )
+
         conexion.commit()
     except mariadb.Error as error_tabla:
         print(f"Error al crear la tabla: {error_tabla}")
@@ -257,6 +246,7 @@ def darBajaCliente(conexion):
     try:
         condicion = True
         while condicion:
+            cursor.execute("SELECT IBAN FROM PERTENECE where DNI='"+DNI+"'")
             IBAN = str(str(cursor.fetchone()).replace("(", "").replace(")", "").replace(",","").replace("'",""))
             cursor.execute("DELETE FROM PERTENECE WHERE IBAN='"+IBAN+"'")
             cursor.execute("DELETE FROM CUENTAS WHERE IBAN='"+IBAN+"'")
@@ -837,186 +827,6 @@ def triggerCuentas(conexion):
                     END
                     ''')
 
-
-##############################################################
-### SUBSISTEMA DE SERVICIOS ###
-##############################################################
-
-def subsistemaServicios(conexion):    
-    print("SUBSISTEMA DE SERVICIOS")
-
-    salir=False
-
-    while not salir:
-        print("OPCIONES:")
-        print("1.-CREAR SERVICIO")
-        print("2.-DAR DE BAJA UN SERVICIO")
-        print("3.-MODIFICAR SERVICIO")
-        print("4.-CONSULTAR SERVICIOS ACTIVOS")
-        print("5.-CONSULTAR SERVICIOS INACTIVOS")
-        print("6.-VOLVER")
-
-        opcion = int(input("INTRODUCE EL NUMERO DE LA OPCION: "))
-        borrarPantalla()
-        #SORPRENDENTEMENTE NO EXISTE SWITCH EN PYTHON
-
-        if opcion == 1:
-            crearServicio(conexion)
-
-        elif opcion == 2:
-            idServicio = int(input("INTRODUCE EL ID DEL SERVICIO QUE QUIERES DAR DE BAJA: "))
-            darBajaServicio(idServicio,conexion)
-
-        elif opcion == 3:
-            idServicio = int(input("INTRODUCE EL ID DEL SERVICIO QUE QUIERES MODIFICAR: "))
-            modificarServicio(idServicio, conexion)
-
-        elif opcion==4:
-            consultarServiciosActivos(conexion)
-        
-        elif opcion==5:
-            consultarServiciosInactivos(conexion)
-        elif opcion==6:
-            salir = True
-
-        else:
-            print("Escribe una opcion correcta")
-
-def darBajaServicio(idServicio,conexion):
-    cur=conexion.cursor()
-    cur.execute("SAVEPOINT dar_baja_servicio")
-    query='UPDATE `servicios` SET `estado`="inactivo" WHERE `id_servicio`='+ str(idServicio)
-    try:
-        cur.execute(query)
-        print("SERVICIO ACTUALIZADO")
-    except mariadb.Error as error_dar_baja_servicio:
-        borrarPantalla()
-        print("La baja del servicio ha fallado")
-        print(error_dar_baja_servicio)
-        conexion.execute("ROLLBACK TO SAVEPOINT dar_baja_servicio")
-    finally:
-        conexion.commit()
-
-def consultarServiciosActivos(conexion):
-    cur=conexion.cursor()
-    query='SELECT `nombre_servicio`,`id_servicio`,`descripcion`,`estado` FROM `servicios` WHERE `estado`="activo"'
-    print("SERVICIOS ACTIVOS")
-    cur.execute("SAVEPOINT consultar_activos")
-    try:
-        cur.execute(query)
-        for (nombre,idServicio, descripcion, estado)in cur:
-            print("")
-            print("nombre = ",nombre)
-            print("id servicio = ",idServicio)
-            print("estado = ", estado)
-            print("descripcion = ", descripcion)
-        print("")
-    except mariadb.Error as error_consultar_activos:
-        borrarPantalla()
-        print("Ha fallado la consulta de los servicios activos")
-        print(error_consultar_activos)
-        cur.execute("ROLLBACK TO SAVEPOINT consultar_activos")
-    finally:
-        conexion.commit()
-        cur.close()
-
-def consultarServiciosInactivos(conexion):
-    cur=conexion.cursor()
-    cur.execute("SAVEPOINT consultar_inactivos")
-    query='SELECT `nombre_servicio`,`descripcion`,`estado` FROM `servicios` WHERE `estado`="inactivo"'
-    try:
-        print("SERVICIOS INACTIVOS")
-        cur.execute(query)
-        for (nombre, descripcion, estado)in cur:
-            print("")
-            print("nombre = ",nombre)
-            print("estado = ", estado)
-            print("descripcion = ", descripcion)
-        print("")
-    except mariadb.Error as error_consultar_inactivos:
-        borrarPantalla()
-        print("Ha fallado la consulta de los servicios inactivos")
-        print(error_consultar_inactivos)
-        cur.execute("ROLLBACK TO SAVEPOINT consultar_inactivos")
-    finally:
-        conexion.commit()
-        cur.close()
-
-def crearServicio(conexion):
-    cur=conexion.cursor()
-    nombre=input("INTRODUCE EL NOMBRE DEL SERVICIO: ")
-    descripcion=input("INTRODUCE UNA DESCRIPCION DE SERVICIO (1000 CARACTERES MAX)")
-    query='INSERT INTO `servicios` (`id_servicio`, `nombre_servicio`, `descripcion`, `estado`) VALUES (NULL, "'+nombre+'", "'+descripcion+'", NULL)'
-    cur.execute("SAVEPOINT crear_servicio")
-    try:
-        cur.execute(query)
-    except mariadb.Error as error_crear_servicio:
-        borrarPantalla()
-        print("Ha habido un error con la creación del servicio")
-        print(error_crear_servicio)
-        cur.execute("ROLLBACK TO SAVEPOINT crear_servicio")
-    finally:
-        conexion.commit()
-        cur.close()
-
-def modificarServicio(idServicio, conexion):
-    cur=conexion.cursor()
-    cur.execute("SAVEPOINT modificar_servicio")
-    #COMPROBAR 1º SI EL ID ES VÁLIDO EN ESE CASO HACER ROLLBACK
-    fin=False
-    try:
-        while not fin:
-            print("¿QUE QUIERE MODIFICAR?:")
-            print("1.-NOMBRE SERVICIO")
-            print("2.-DESCRIPCION")
-            print("3.-LOS DOS")
-            print("4.-VOLVER")
-
-            opcion = int(input("INTRODUCE EL NUMERO DE LA OPCION: "))
-            os.system("cls")
-
-            if opcion==1:
-                nombre=input("INTRODUCE EL NOMBRE DEL SERVICIO: ")
-                query='UPDATE `servicios` SET `nombre_servicio`="'+nombre+'" WHERE `id_servicio`='+str(idServicio)
-                cur.execute(query)
-                fin=True
-            elif opcion==2:
-                descripcion=input("INTRODUCE UNA DESCRIPCION DE SERVICIO (1000 CARACTERES MAX)")
-                query='UPDATE `servicios` SET `descripcion`="'+descripcion+'" WHERE `id_servicio`='+str(idServicio)
-                cur.execute(query)
-                fin=True
-            elif opcion==3:
-                nombre=input("INTRODUCE EL NOMBRE DEL SERVICIO: ")
-                descripcion=input("INTRODUCE UNA DESCRIPCION DE SERVICIO (1000 CARACTERES MAX)")
-                query='UPDATE `servicios` SET `nombre_servicio`="'+nombre+'",`descripcion`="'+descripcion+'"  WHERE `id_servicio`='+str(idServicio)
-                cur.execute(query)
-                fin=True
-            elif opcion==4:
-                print("NO HAS MODIFICADO NADA")
-                fin=True
-            else:   
-                print("INTRODUCE UNA OPCIÓN VALIDA")
-    except mariadb.Error as error_modificar_servicio:
-        borrarPantalla()
-        print("Ha habido un problema modificando el servicio")
-        print(error_modificar_servicio)
-        cur.execute("ROLLBACK TO SAVEPOINT modificar_servicio")
-    finally:
-        conexion.commit()
-        cur.close()
-
-def triggerServicios(conexion):
-    cur = conexion.cursor()
-    cur.execute('''CREATE OR REPLACE TRIGGER activar_servicio
-	BEFORE 
-	INSERT ON servicios
-	FOR EACH ROW
-    BEGIN
-        SET NEW.estado = 'activo';
-    END;''')
-    cur.close()
-    
-
 ##############################################################
 ### MENÚ PRINCIPAL ###
 ##############################################################
@@ -1051,7 +861,6 @@ while not salir:
         subsistemaClientes(cnx)
     elif opcion==3:
         borrarPantalla()
-        subsistemaServicios(cnx)
     elif opcion==4:
         borrarPantalla()
         subsistemaCuentas(cnx)
