@@ -216,6 +216,7 @@ def subsistemaClientes(conexion):
             modificarDatosClientes(conexion)
         elif(opcion_cli==5):
             borrarPantalla()
+            listar_cuentas_cliente(conexion)
         elif(opcion_cli==9):
             salir_cli = True
     
@@ -321,7 +322,7 @@ def listar_cuentas_cliente(conexion):
     cursor.execute("SAVEPOINT consulta_cuentas")
     DNI = input("Introduzca el DNI del cliente sobre el que desea ver los datos: ")
     try:
-        cursor.execute("SELECT IBAN FROM CUENTAS where DNI_prop='"+DNI+"'")
+        cursor.execute("SELECT IBAN FROM PERTENECE where DNI='"+DNI+"'")
         IBAN = str(cursor.fetchone())
         print(IBAN)
     except mariadb.Error as error_consulta_cuentas:
@@ -413,6 +414,7 @@ def eliminarSucursal(conexion):
     ID_Sucursal = input("Para poder eliminar una sucursal debe proporcionar su ID: ")
 
     try:
+        cursor.execute("DELETE FROM TRABAJA WHERE ID_SUCURSAL = ('"+ID_Sucursal+"')")
         cursor.execute("DELETE FROM SUCURSALES WHERE ID_SUCURSAL = ('"+ID_Sucursal+"')")
         print("\nSucursal eliminada correctamente.")
         print("\nVolviendo al menú anterior. \n")
@@ -469,7 +471,7 @@ def consultarTrabajadoresSucursal(conexion):
     
     ID_Sucursal = input("Introduzca el ID de una sucursal: ")
     try:
-        query = "SELECT DISTINCT TRABAJADORES.NOMBRE, TRABAJADORES.APELLIDO FROM TRABAJADORES INNER JOIN TRABAJA ON TRABAJADORES.DNI=TRABAJA.DNI WHERE ID_SUCURSAL=8269813641"
+        query = "SELECT DISTINCT TRABAJADORES.NOMBRE, TRABAJADORES.APELLIDO FROM TRABAJADORES INNER JOIN TRABAJA ON TRABAJADORES.DNI=TRABAJA.DNI WHERE ID_SUCURSAL='"+ID_Sucursal+"'"
         cursor.execute(query)
         records = cursor.fetchall()
 
@@ -563,6 +565,7 @@ def darBajaTrabajador(conexion):
     print("Usted está dando de baja a un trabajador.")
     DNI=input("Introduzca el DNI del trabajador: ")
     try:
+        cursor.execute("DELETE FROM TURNOS WHERE DNI='"+DNI+"'")
         cursor.execute("DELETE FROM TRABAJADORES WHERE DNI='"+DNI+"'")
         borrarPantalla()
         print("Se ha dado de baja al trabajador correctamente.")
